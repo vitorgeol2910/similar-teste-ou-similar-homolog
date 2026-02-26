@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposta Comercial - Similar Engenharia</title>
+    <!-- Biblioteca para converter Markdown em HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-blue: #1e3a8a;
+            --primary-orange: #ea580c;
+            --light-gray: #f5f5f5;
+            --dark-gray: #333;
+            --border-color: #ddd;
+            --whatsapp-green: #25d366;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #fff; color: var(--dark-gray); line-height: 1.6; padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: 40px auto; border: 1px solid var(--border-color); padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background: white; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-blue); padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { width: 120px; }
+        .proposal-info { text-align: right; }
+        .proposal-info h1 { font-size: 24px; color: var(--primary-blue); margin: 0; }
+        .proposal-info p { font-size: 14px; color: #666; margin: 4px 0; }
+        .section { margin-bottom: 30px; }
+        .section-title { font-size: 18px; font-weight: 700; color: var(--primary-blue); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px; text-transform: uppercase; }
+        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .data-label { font-weight: 600; color: #555; }
+        .data-value { font-weight: 700; color: var(--dark-gray); }
+        
+        /* Estilos para o conteúdo Markdown */
+        .description { background: #f9f9f9; padding: 25px; border-radius: 6px; border-left: 4px solid var(--primary-orange); margin-top: 10px; font-size: 15px; }
+        .description h1, .description h2, .description h3 { color: var(--primary-blue); margin-top: 20px; margin-bottom: 10px; }
+        .description p { margin-bottom: 15px; }
+        .description ul, .description ol { margin-bottom: 15px; padding-left: 25px; }
+        .description li { margin-bottom: 5px; }
+        .description strong { color: #000; font-weight: 700; }
+        
+        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .loading { text-align: center; padding: 100px; font-size: 18px; color: #666; }
+        .error { text-align: center; padding: 100px; color: #b91c1c; }
+        
+        .actions-container { display: flex; flex-direction: column; gap: 15px; margin-top: 40px; align-items: center; }
+        .btn-whatsapp { background: var(--whatsapp-green); color: white; border: none; padding: 18px 32px; border-radius: 50px; font-weight: 700; font-size: 16px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); transition: transform 0.2s; }
+        .btn-whatsapp:hover { transform: scale(1.02); background: #128c7e; }
+        .btn-print { background: #666; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; cursor: pointer; text-decoration: none; }
+        
+        @media print { 
+            .container { border: none; box-shadow: none; padding: 0; margin: 0; width: 100%; max-width: 100%; } 
+            .actions-container, .btn-print { display: none !important; } 
+            body { padding: 0; } 
+        }
+        @media (max-width: 600px) {
+            .header { flex-direction: column; text-align: center; gap: 20px; }
+            .proposal-info { text-align: center; }
+            .container { padding: 20px; margin: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <div class="loading">Carregando proposta...</div>
+    </div>
+
+    <script>
+        async function loadProposal() {
+            const path = window.location.pathname;
+            const slug = path.split('/').filter(Boolean).pop();
+            const contentDiv = document.getElementById('content');
+
+            if (!slug || slug === 'proposta.html' || slug === 'p') {
+                contentDiv.innerHTML = '<div class="error"><h1>Erro</h1><p>Nenhuma proposta especificada na URL.</p></div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/propostas/${slug}.md`);
+                if (!response.ok) throw new Error('Arquivo da proposta não encontrado no servidor.');
+
+                const text = await response.text();
+                
+                const meta = {};
+                const yamlMatch = text.match(/---\n([\s\S]*?)\n---/);
+                if (yamlMatch) {
+                    yamlMatch[1].split('\n').forEach(line => {
+                        const [k, ...v] = line.split(':');
+                        if (k && v.length) meta[k.trim()] = v.join(':').trim();
+                    });
+                }
+                const rawDescription = text.replace(/---\n([\s\S]*?)\n---/, '').trim();
+                
+                // Converte Markdown para HTML usando a biblioteca Marked
+                const formattedDescription = marked.parse(rawDescription);
+
+                const cleanWhatsapp = (meta.whatsapp || '').replace(/\D/g, '');
+                const whatsappMsg = encodeURIComponent(`Olá ${meta.consultant || 'Equipe Similar'}! Gostaria de aprovar a proposta comercial enviada para ${meta.client}. Ref: ${meta.number || slug}`);
+                const whatsappLink = `https://wa.me/${cleanWhatsapp}?text=${whatsappMsg}`;
+
+                contentDiv.innerHTML = `
+                    <div class="container">
+                        <div class="header">
+                            <img src="/logo.png" class="logo" alt="Similar Engenharia">
+                            <div class="proposal-info">
+                                <h1>PROPOSTA COMERCIAL</h1>
+                                <p>Nº ${meta.number || '-'}</p>
+                                <p>Data: ${meta.date || '-'}</p>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">Dados do Cliente</div>
+                            <div class="data-row"><span class="data-label">Cliente:</span><span class="data-value">${meta.client || '-'}</span></div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">Resumo do Investimento</div>
+                            <div class="data-row"><span class="data-label">Valor Total:</span><span class="data-value">${meta.value || '-'}</span></div>
+                            <div class="data-row"><span class="data-label">Prazo de Entrega:</span><span class="data-value">${meta.deadline || '-'}</span></div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">Consultor Responsável</div>
+                            <div class="data-row"><span class="data-label">Nome:</span><span class="data-value">${meta.consultant || '-'}</span></div>
+                            <div class="data-row"><span class="data-label">WhatsApp:</span><span class="data-value">${meta.whatsapp || '-'}</span></div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">Descrição dos Serviços</div>
+                            <div class="description">${formattedDescription || 'Nenhuma descrição detalhada fornecida.'}</div>
+                        </div>
+
+                        <div class="actions-container">
+                            <a href="${whatsappLink}" class="btn-whatsapp" target="_blank">
+                                ✅ APROVAR PROPOSTA VIA WHATSAPP
+                            </a>
+                            <button class="btn-print" onclick="window.print()">🖨️ Imprimir ou Salvar PDF</button>
+                        </div>
+
+                        <div class="footer">
+                            <p>Similar Engenharia - Soluções em Geotecnia e Engenharia Elétrica</p>
+                            <p>similarengenharia.com.br</p>
+                        </div>
+                    </div>
+                `;
+                document.title = `Proposta - ${meta.client || slug}`;
+            } catch (e) {
+                contentDiv.innerHTML = `<div class="error"><h1>Erro ao Carregar</h1><p>${e.message}</p></div>`;
+            }
+        }
+
+        loadProposal();
+    </script>
+</body>
+</html>
